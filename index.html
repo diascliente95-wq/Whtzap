@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>💬 Mensageiro Firebase</title>
+
+    <!-- Firebase SDKs (versão 9 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+    </script>
+
+    <style>
+        /* ─── Reset & Base ─── */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #7c6cf0;
+            border-radius: 4px;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 1200px;
+            height: 100vh;
+            max-height: 800px;
+            background: #141428;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 640px) {
+            #app {
+                max-height: 100vh;
+                border-radius: 0;
+            }
+        }
+
+        /* ─── Auth Screen ─── */
+        #auth-screen {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: radial-gradient(ellipse at 30% 20%, #1a1a3e, #0a0a1a 80%);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(20, 20, 40, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(124, 108, 240, 0.2);
+            border-radius: 20px;
+            padding: 40px 32px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .auth-container .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .auth-container .logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c6cf0, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .auth-container .logo p {
+            color: #9090b0;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 28px;
+        }
+
+        .auth-tabs button {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #9090b0;
+        }
+
+        .auth-tabs button.active {
+            background: #7c6cf0;
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(124, 108, 240, 0.3);
+        }
+
+        .auth-tabs button:hover:not(.active) {
+            color: #e0e0e0;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-form input {
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e0e0e0;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .auth-form input::placeholder {
+            color: #606080;
+        }
+
+        .auth-form input:focus {
+            border-color: #7c6cf0;
+            background: rgba(124, 108, 240, 0.06);
+            box-shadow: 0 0 0 4px rgba(124, 108, 240, 0.08);
+        }
+
+        .auth-form .submit-btn {
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #7c6cf0, #6d5dd8);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 4px;
+        }
+
+        .auth-form .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(124, 108, 240, 0.35);
+        }
+
+        .auth-form .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .auth-error {
+            color: #f87171;
+            font-size: 13px;
+            text-align: center;
+            min-height: 20px;
+            margin-top: -8px;
+        }
+
+        .auth-success {
+            color: #6ee7b7;
+            font-size: 13px;
+            text-align: center;
+            min-height: 20px;
+            margin-top: -8px;
+        }
+
+        /* ─── Chat Screen ─── */
+        #chat-screen {
+            flex: 1;
+            display: none;
+            height: 100%;
+            animation: fadeIn 0.4s ease;
+        }
+
+        #chat-screen.active {
+            display: flex;
+        }
+
+        /* ─── Sidebar ─── */
+        .sidebar {
+            width: 300px;
+            min-width: 300px;
+            background: #10101f;
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .sidebar .user-info {
+            padding: 20px 20px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            flex-shrink: 0;
+        }
+
+        .sidebar .user-info .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+            flex-shrink: 0;
+            background: #7c6cf0;
+        }
+
+        .sidebar .user-info .name-wrap {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar .user-info .name-wrap .username {
+            font-weight: 600;
+            font-size: 15px;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar .user-info .name-wrap .status {
+            font-size: 12px;
+            color: #6ee7b7;
+            display: block;
+        }
+
+        .sidebar .user-info .logout-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #9090b0;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .sidebar .user-info .logout-btn:hover {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+        }
+
+        .sidebar .contact-list-wrap {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 12px 20px;
+        }
+
+        .sidebar .contact-list-wrap .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #606080;
+            padding: 12px 8px 8px;
+            font-weight: 600;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 2px;
+        }
+
+        .contact-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .contact-item.active {
+            background: rgba(124, 108, 240, 0.15);
+            box-shadow: inset 0 0 0 1px rgba(124, 108, 240, 0.15);
+        }
+
+        .contact-item .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .contact-item .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .contact-item .info .name {
+            font-weight: 500;
+            font-size: 14px;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .contact-item .info .last-msg {
+            font-size: 13px;
+            color: #707090;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .contact-item .time {
+            font-size: 11px;
+            color: #606080;
+            flex-shrink: 0;
+        }
+
+        .no-contacts {
+            text-align: center;
+            padding: 40px 16px;
+            color: #606080;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .no-contacts .icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .add-contact-wrap {
+            padding: 8px 16px 16px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            flex-shrink: 0;
+        }
+
+        .add-contact-wrap input {
+            flex: 1;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e0e0e0;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .add-contact-wrap input::placeholder {
+            color: #606080;
+        }
+
+        .add-contact-wrap input:focus {
+            border-color: #7c6cf0;
+        }
+
+        .add-contact-wrap button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            background: #7c6cf0;
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .add-contact-wrap button:hover {
+            background: #6d5dd8;
+        }
+
+        /* ─── Chat Main ─── */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #0f0f1e;
+            min-width: 0;
+        }
+
+        .chat-main .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+            min-height: 72px;
+        }
+
+        .chat-main .chat-header .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .chat-main .chat-header .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-main .chat-header .info .name {
+            font-weight: 600;
+            font-size: 16px;
+            display: block;
+        }
+
+        .chat-main .chat-header .info .status {
+            font-size: 13px;
+            color: #6ee7b7;
+        }
+
+        .chat-main .chat-header .info .status.offline {
+            color: #606080;
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chat-header-actions button {
+            background: rgba(255, 255, 255, 0.06);
+            border: none;
+            border-radius: 8px;
+            color: #9090b0;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .chat-header-actions button:hover {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+        }
+
+        .chat-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #606080;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .chat-empty .icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .chat-empty h3 {
+            font-size: 18px;
+            color: #a0a0b0;
+            margin-bottom: 6px;
+        }
+
+        .chat-empty p {
+            font-size: 14px;
+            max-width: 280px;
+        }
+
+        /* ─── Messages ─── */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 10px 16px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            animation: msgIn 0.25s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes msgIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96) translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #7c6cf0, #6d5dd8);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+            display: block;
+            text-align: right;
+        }
+
+        .message .sender-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #a78bfa;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .message.received .sender-name {
+            color: #7c6cf0;
+        }
+
+        .message .msg-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .message .msg-actions button {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            border-radius: 6px;
+            color: #ccc;
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .message .msg-actions button:hover {
+            background: rgba(248, 113, 113, 0.3);
+            color: #f87171;
+        }
+
+        .message.sent .msg-actions button {
+            color: #ddd;
+        }
+
+        .message.sent .msg-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ff6b6b;
+        }
+
+        .date-divider {
+            text-align: center;
+            font-size: 12px;
+            color: #606080;
+            padding: 16px 0 10px;
+            font-weight: 500;
+        }
+
+        /* ─── Message Input ─── */
+        .message-input-wrap {
+            padding: 16px 24px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+            background: #0f0f1e;
+            align-items: center;
+        }
+
+        .message-input-wrap input {
+            flex: 1;
+            padding: 12px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e0e0e0;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .message-input-wrap input::placeholder {
+            color: #606080;
+        }
+
+        .message-input-wrap input:focus {
+            border-color: #7c6cf0;
+            background: rgba(124, 108, 240, 0.06);
+            box-shadow: 0 0 0 4px rgba(124, 108, 240, 0.06);
+        }
+
+        .message-input-wrap input:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .message-input-wrap .emoji-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: none;
+            border-radius: 14px;
+            color: #e0e0e0;
+            font-size: 24px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            line-height: 1;
+            flex-shrink: 0;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-input-wrap .emoji-btn:hover {
+            background: rgba(124, 108, 240, 0.2);
+            transform: scale(1.05);
+        }
+
+        .message-input-wrap .emoji-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message-input-wrap .send-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #7c6cf0, #6d5dd8);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            height: 48px;
+        }
+
+        .message-input-wrap .send-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(124, 108, 240, 0.3);
+        }
+
+        .message-input-wrap .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ─── Emoji Picker ─── */
+        .emoji-picker {
+            position: absolute;
+            bottom: 80px;
+            right: 24px;
+            background: #1a1a3e;
+            border: 1px solid rgba(124, 108, 240, 0.2);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            display: none;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 6px;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .emoji-picker.show {
+            display: grid;
+        }
+
+        .emoji-picker button {
+            background: transparent;
+            border: none;
+            font-size: 26px;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: 0.15s;
+            line-height: 1.2;
+        }
+
+        .emoji-picker button:hover {
+            background: rgba(124, 108, 240, 0.2);
+            transform: scale(1.15);
+        }
+
+        .message-input-wrap {
+            position: relative;
+        }
+
+        @media (max-width: 500px) {
+            .emoji-picker {
+                right: 10px;
+                max-width: 240px;
+                grid-template-columns: repeat(6, 1fr);
+                max-height: 160px;
+            }
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 860px) {
+            .sidebar {
+                width: 240px;
+                min-width: 240px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            #chat-screen {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: unset;
+                height: auto;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+                flex-shrink: 0;
+            }
+
+            .sidebar .user-info {
+                padding: 12px 16px;
+            }
+
+            .sidebar .user-info .avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+
+            .sidebar .contact-list-wrap {
+                padding: 8px 12px 12px;
+            }
+
+            .contact-item {
+                padding: 8px 12px;
+            }
+
+            .contact-item .avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+
+            .add-contact-wrap {
+                padding: 8px 12px 12px;
+            }
+
+            .chat-main .chat-header {
+                padding: 12px 16px;
+                min-height: 56px;
+            }
+
+            .messages-container {
+                padding: 12px 14px 8px;
+            }
+
+            .message {
+                max-width: 85%;
+                font-size: 14px;
+                padding: 8px 14px;
+            }
+
+            .message-input-wrap {
+                padding: 12px 14px 16px;
+                gap: 8px;
+            }
+
+            .message-input-wrap input {
+                padding: 10px 14px;
+                font-size: 14px;
+                height: 44px;
+            }
+
+            .message-input-wrap .emoji-btn {
+                height: 44px;
+                font-size: 22px;
+                padding: 4px 10px;
+            }
+
+            .message-input-wrap .send-btn {
+                padding: 10px 18px;
+                font-size: 14px;
+                height: 44px;
+            }
+
+            .emoji-picker {
+                bottom: 70px;
+                right: 10px;
+                max-width: 220px;
+                grid-template-columns: repeat(5, 1fr);
+            }
+
+            .auth-container {
+                padding: 28px 20px;
+            }
+
+            .auth-container .logo h1 {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .sidebar {
+                max-height: 160px;
+            }
+
+            .sidebar .user-info .logout-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .message {
+                max-width: 92%;
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+
+            .auth-container {
+                padding: 20px 16px;
+            }
+
+            .emoji-picker {
+                max-width: 180px;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 4px;
+                right: 6px;
+            }
+
+            .emoji-picker button {
+                font-size: 22px;
+                padding: 2px;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ─── Toast ─── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 14px 28px;
+            border-radius: 14px;
+            background: #1a1a3e;
+            border: 1px solid rgba(124, 108, 240, 0.2);
+            color: #e0e0e0;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            transition: all 0.4s ease;
+            z-index: 999;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            border-color: rgba(248, 113, 113, 0.3);
+            background: #2a1a1a;
+        }
+
+        .toast.success {
+            border-color: rgba(110, 231, 183, 0.3);
+            background: #1a2a1a;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── TOAST ─── -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ─── APP ─── -->
+    <div id="app">
+
+        <!-- ═══ AUTH SCREEN ═══ -->
+        <div id="auth-screen">
+            <div class="auth-container">
+                <div class="logo">
+                    <h1>💬 Mensageiro</h1>
+                    <p>Conecte-se com segurança</p>
+                </div>
+
+                <div class="auth-tabs" role="tablist">
+                    <button class="active" data-tab="login" role="tab">Entrar</button>
+                    <button data-tab="register" role="tab">Cadastrar</button>
+                </div>
+
+                <!-- Login -->
+                <form id="login-form" class="auth-form" autocomplete="off">
+                    <input type="text" id="login-username" placeholder="Usuário" required autofocus />
+                    <input type="password" id="login-password" placeholder="Senha" required />
+                    <div id="login-error" class="auth-error"></div>
+                    <button type="submit" class="submit-btn">Entrar</button>
+                </form>
+
+                <!-- Register -->
+                <form id="register-form" class="auth-form hidden" autocomplete="off">
+                    <input type="text" id="register-username" placeholder="Escolha um usuário" required />
+                    <input type="password" id="register-password" placeholder="Senha" required />
+                    <input type="password" id="register-confirm" placeholder="Confirmar senha" required />
+                    <div id="register-error" class="auth-error"></div>
+                    <div id="register-success" class="auth-success"></div>
+                    <button type="submit" class="submit-btn">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ═══ CHAT SCREEN ═══ -->
+        <div id="chat-screen">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="user-info">
+                    <div class="avatar" id="my-avatar">U</div>
+                    <div class="name-wrap">
+                        <span class="username" id="my-username">Usuário</span>
+                        <span class="status">● Online</span>
+                    </div>
+                    <button class="logout-btn" id="logout-btn">Sair</button>
+                </div>
+                <div class="contact-list-wrap">
+                    <div class="section-title">Contatos</div>
+                    <div id="contact-list"></div>
+                </div>
+                <div class="add-contact-wrap">
+                    <input type="text" id="add-contact-input" placeholder="Adicionar contato (username)" />
+                    <button id="add-contact-btn">Adicionar</button>
+                </div>
+            </aside>
+
+            <!-- Main Chat -->
+            <main class="chat-main">
+                <header class="chat-header" id="chat-header">
+                    <div class="avatar" id="chat-avatar" style="background:#555">?</div>
+                    <div class="info">
+                        <span class="name" id="chat-name">Selecione um contato</span>
+                        <span class="status offline" id="chat-status">offline</span>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button id="clear-conversation-btn" title="Apagar toda a conversa">🗑️ Apagar conversa</button>
+                    </div>
+                </header>
+
+                <div class="messages-container" id="messages-container">
+                    <div class="chat-empty" id="chat-empty">
+                        <span class="icon">💬</span>
+                        <h3>Nenhuma conversa</h3>
+                        <p>Selecione um contato para começar a trocar mensagens</p>
+                    </div>
+                </div>
+
+                <div class="message-input-wrap">
+                    <input type="text" id="message-input" placeholder="Digite uma mensagem..." disabled />
+                    <button class="emoji-btn" id="emoji-btn" disabled title="Emojis">😊</button>
+                    <button class="send-btn" id="send-btn" disabled>Enviar</button>
+                    <!-- Emoji Picker -->
+                    <div class="emoji-picker" id="emoji-picker"></div>
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <script>
+        /* ═══════════════════════════════════════════════════════════
+           FIREBASE CONFIG
+           ═══════════════════════════════════════════════════════════ */
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcfCQsqcV0E3QNaCaSnYsncKsf736Co4w",
+            authDomain: "what-38e73.firebaseapp.com",
+            databaseURL: "https://what-38e73-default-rtdb.firebaseio.com",
+            projectId: "what-38e73",
+            storageBucket: "what-38e73.firebasestorage.app",
+            messagingSenderId: "619612646300",
+            appId: "1:619612646300:web:9b08a2dd2b09f038863659"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        /* ═══════════════════════════════════════════════════════════
+           EMOJIS
+           ═══════════════════════════════════════════════════════════ */
+
+        const EMOJIS = [
+            '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆',
+            '😉', '😊', '😋', '😎', '😍', '🥰', '😘', '😗',
+            '😙', '😚', '🥲', '😜', '😝', '😛', '🤑', '🤓',
+            '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+            '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠',
+            '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨',
+            '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥',
+            '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧',
+            '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+            '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑',
+            '🤠', '😈', '👿', '👹', '👺', '💀', '☠️', '👻',
+            '👽', '👾', '🤖', '💩', '😺', '😸', '😹', '😻',
+            '😼', '😽', '🙀', '😿', '😾', '🙌', '👏', '👍',
+            '👎', '👊', '✊', '🤛', '🤜', '👋', '🤚', '🖐️',
+            '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟',
+            '🤘', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍'
+        ];
+
+        /* ═══════════════════════════════════════════════════════════
+           LIMPEZA GLOBAL
+           ═══════════════════════════════════════════════════════════ */
+
+        async function limparTodosOsDados() {
+            const confirmacao = confirm(
+                '⚠️ ATENÇÃO: Isso vai APAGAR TODOS os usuários, contatos e mensagens do seu Firebase. Deseja continuar?'
+                );
+            if (!confirmacao) return;
+
+            try {
+                const msgSnap = await db.collection('messages').get();
+                let batch = db.batch();
+                let count = 0;
+                msgSnap.forEach(doc => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count % 500 === 0) {
+                        batch.commit();
+                        batch = db.batch();
+                    }
+                });
+                if (count % 500 !== 0) await batch.commit();
+                console.log(`✅ ${count} mensagens apagadas.`);
+
+                const contSnap = await db.collection('contacts').get();
+                batch = db.batch();
+                count = 0;
+                contSnap.forEach(doc => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count % 500 === 0) {
+                        batch.commit();
+                        batch = db.batch();
+                    }
+                });
+                if (count % 500 !== 0) await batch.commit();
+                console.log(`✅ ${count} contatos apagados.`);
+
+                const userSnap = await db.collection('users').get();
+                batch = db.batch();
+                count = 0;
+                userSnap.forEach(doc => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count % 500 === 0) {
+                        batch.commit();
+                        batch = db.batch();
+                    }
+                });
+                if (count % 500 !== 0) await batch.commit();
+                console.log(`✅ ${count} usuários apagados.`);
+
+                showToast('🧹 Todos os dados foram apagados com sucesso!', 'success', 4000);
+
+                if (state.currentUser) {
+                    if (state.unsubContacts) state.unsubContacts();
+                    if (state.unsubMessages) state.unsubMessages();
+                    state.currentUser = null;
+                    state.contacts = [];
+                    state.messages = [];
+                    state.selectedContact = null;
+                    renderAuthScreen();
+                }
+
+            } catch (e) {
+                console.error('Erro ao limpar dados:', e);
+                showToast('Erro ao limpar: ' + e.message, 'error');
+            }
+        }
+
+        window.limparTodosOsDados = limparTodosOsDados;
+
+        /* ═══════════════════════════════════════════════════════════
+           DATA LAYER
+           ═══════════════════════════════════════════════════════════ */
+
+        function getConversationId(userA, userB) {
+            return [userA, userB].sort().join('_');
+        }
+
+        async function createUser(username, password) {
+            console.log('📝 Tentando criar usuário:', username);
+            try {
+                await db.collection('users').doc(username).set({
+                    username,
+                    password,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('✅ Usuário criado com sucesso:', username);
+                return { success: true };
+            } catch (e) {
+                console.error('❌ Erro ao criar usuário:', e);
+                return { success: false, error: e.message };
+            }
+        }
+
+        async function findUser(username, password) {
+            console.log('🔍 Buscando usuário:', username);
+            try {
+                const doc = await db.collection('users').doc(username).get();
+                if (!doc.exists) {
+                    console.log('❌ Usuário não encontrado:', username);
+                    return null;
+                }
+                const data = doc.data();
+                if (data.password === password) {
+                    console.log('✅ Usuário encontrado e senha correta:', username);
+                    return { username: data.username };
+                }
+                console.log('❌ Senha incorreta para:', username);
+                return null;
+            } catch (e) {
+                console.error('❌ Erro ao buscar usuário:', e);
+                return null;
+            }
+        }
+
+        async function userExists(username) {
+            try {
+                const doc = await db.collection('users').doc(username).get();
+                const exists = doc.exists;
+                console.log(`🔍 Verificando existência de ${username}: ${exists}`);
+                return exists;
+            } catch (e) {
+                console.error('❌ Erro ao verificar existência:', e);
+                return false;
+            }
+        }
+
+        async function addContact(user, contact) {
+            try {
+                const exists = await userExists(contact);
+                if (!exists) return { success: false, error: 'Usuário não encontrado.' };
+
+                const snap = await db.collection('contacts')
+                    .where('user', '==', user)
+                    .where('contact', '==', contact)
+                    .get();
+                if (!snap.empty) return { success: false, error: 'Contato já adicionado.' };
+
+                await db.collection('contacts').add({
+                    user,
+                    contact,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                return { success: true };
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+
+        function listenContacts(user, callback) {
+            return db.collection('contacts')
+                .where('user', '==', user)
+                .onSnapshot((snapshot) => {
+                    const contacts = [];
+                    snapshot.forEach(doc => {
+                        contacts.push(doc.data().contact);
+                    });
+                    callback(contacts);
+                }, (error) => {
+                    console.error('Erro ao ouvir contatos:', error);
+                });
+        }
+
+        async function sendMessage(from, to, text) {
+            try {
+                const convId = getConversationId(from, to);
+                await db.collection('messages').add({
+                    from,
+                    to,
+                    text,
+                    conversationId: convId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                return { success: true };
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+
+        function listenMessages(userA, userB, callback) {
+            const convId = getConversationId(userA, userB);
+            return db.collection('messages')
+                .where('conversationId', '==', convId)
+                .orderBy('timestamp', 'asc')
+                .onSnapshot((snapshot) => {
+                    const msgs = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        msgs.push({
+                            id: doc.id,
+                            from: data.from,
+                            to: data.to,
+                            text: data.text,
+                            timestamp: data.timestamp ? data.timestamp.toMillis() : Date.now()
+                        });
+                    });
+                    callback(msgs);
+                }, (error) => {
+                    console.error('Erro ao ouvir mensagens:', error);
+                });
+        }
+
+        async function deleteMessage(messageId) {
+            try {
+                await db.collection('messages').doc(messageId).delete();
+                return { success: true };
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+
+        async function clearConversation(userA, userB) {
+            const convId = getConversationId(userA, userB);
+            try {
+                const snap = await db.collection('messages')
+                    .where('conversationId', '==', convId)
+                    .get();
+                const batch = db.batch();
+                snap.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                return { success: true };
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           APP STATE
+           ═══════════════════════════════════════════════════════════ */
+
+        const state = {
+            currentUser: null,
+            contacts: [],
+            selectedContact: null,
+            messages: [],
+            unsubContacts: null,
+            unsubMessages: null,
+        };
+
+        /* ═══════════════════════════════════════════════════════════
+           TOAST
+           ═══════════════════════════════════════════════════════════ */
+        let toastTimer = null;
+
+        function showToast(message, type = 'info', duration = 3000) {
+            const el = document.getElementById('toast');
+            el.textContent = message;
+            el.className = 'toast';
+            if (type === 'error') el.classList.add('error');
+            if (type === 'success') el.classList.add('success');
+            void el.offsetWidth;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                el.classList.remove('show');
+            }, duration);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           RENDER: AUTH
+           ═══════════════════════════════════════════════════════════ */
+
+        function renderAuthScreen() {
+            const authScreen = document.getElementById('auth-screen');
+            const chatScreen = document.getElementById('chat-screen');
+            const user = state.currentUser;
+
+            if (user) {
+                authScreen.style.display = 'none';
+                chatScreen.classList.add('active');
+                chatScreen.style.display = 'flex';
+                initApp();
+            } else {
+                authScreen.style.display = 'flex';
+                chatScreen.classList.remove('active');
+                chatScreen.style.display = 'none';
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('register-form').classList.add('hidden');
+                document.querySelector('.auth-tabs [data-tab="login"]').classList.add('active');
+                document.querySelector('.auth-tabs [data-tab="register"]').classList.remove('active');
+                document.getElementById('login-error').textContent = '';
+                document.getElementById('register-error').textContent = '';
+                document.getElementById('register-success').textContent = '';
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           RENDER: CHAT
+           ═══════════════════════════════════════════════════════════ */
+
+        function renderChatScreen() {
+            if (!state.currentUser) return;
+            document.getElementById('my-username').textContent = state.currentUser.username;
+            document.getElementById('my-avatar').textContent = getInitials(state.currentUser.username);
+            document.getElementById('my-avatar').style.background = getAvatarColor(state.currentUser.username);
+
+            renderContactList();
+
+            if (!state.selectedContact) {
+                showEmptyState();
+                document.getElementById('message-input').disabled = true;
+                document.getElementById('send-btn').disabled = true;
+                document.getElementById('emoji-btn').disabled = true;
+                document.getElementById('chat-name').textContent = 'Selecione um contato';
+                document.getElementById('chat-status').textContent = 'offline';
+                document.getElementById('chat-status').className = 'status offline';
+                document.getElementById('chat-avatar').textContent = '?';
+                document.getElementById('chat-avatar').style.background = '#555';
+                document.getElementById('clear-conversation-btn').style.display = 'none';
+                if (state.unsubMessages) {
+                    state.unsubMessages();
+                    state.unsubMessages = null;
+                }
+            } else {
+                document.getElementById('clear-conversation-btn').style.display = 'block';
+                loadMessagesForContact(state.selectedContact);
+                document.getElementById('message-input').disabled = false;
+                document.getElementById('send-btn').disabled = false;
+                document.getElementById('emoji-btn').disabled = false;
+            }
+        }
+
+        function renderContactList() {
+            const container = document.getElementById('contact-list');
+            const contacts = state.contacts;
+
+            if (contacts.length === 0) {
+                container.innerHTML = `
+                <div class="no-contacts">
+                  <span class="icon">👥</span>
+                  Nenhum contato disponível<br />
+                  <span style="font-size:13px;color:#505070;">Adicione um usuário para começar</span>
+                </div>
+              `;
+                return;
+            }
+
+            let html = '';
+            for (const contact of contacts) {
+                const color = getAvatarColor(contact);
+                const isActive = state.selectedContact === contact;
+                const lastMsg = state.messages.length > 0 ? state.messages[state.messages.length - 1] : null;
+                const lastText = lastMsg ? (lastMsg.from === state.currentUser.username ? 'Você: ' : '') + lastMsg.text :
+                    '';
+                const lastTime = lastMsg ? formatTime(lastMsg.timestamp) : '';
+
+                html += `
+                <div class="contact-item ${isActive ? 'active' : ''}"
+                     data-contact="${contact}"
+                     onclick="selectContact('${contact}')">
+                  <div class="avatar" style="background:${color}">${getInitials(contact)}</div>
+                  <div class="info">
+                    <span class="name">${contact}</span>
+                    <span class="last-msg">${lastText || 'Nenhuma mensagem'}</span>
+                  </div>
+                  ${lastTime ? `<span class="time">${lastTime}</span>` : ''}
+                </div>
+              `;
+            }
+            container.innerHTML = html;
+        }
+
+        function loadMessagesForContact(contact) {
+            if (!state.currentUser) return;
+            if (state.unsubMessages) {
+                state.unsubMessages();
+                state.unsubMessages = null;
+            }
+
+            state.unsubMessages = listenMessages(
+                state.currentUser.username,
+                contact,
+                (msgs) => {
+                    state.messages = msgs;
+                    renderMessages(msgs, contact);
+                    renderContactList();
+                    const color = getAvatarColor(contact);
+                    document.getElementById('chat-avatar').textContent = getInitials(contact);
+                    document.getElementById('chat-avatar').style.background = color;
+                    document.getElementById('chat-name').textContent = contact;
+                    document.getElementById('chat-status').textContent = '● Online';
+                    document.getElementById('chat-status').className = 'status';
+                    document.getElementById('message-input').disabled = false;
+                    document.getElementById('send-btn').disabled = false;
+                    document.getElementById('emoji-btn').disabled = false;
+                    scrollToBottom();
+                }
+            );
+        }
+
+        function renderMessages(msgs, contact) {
+            const container = document.getElementById('messages-container');
+            if (!msgs.length) {
+                container.innerHTML = `
+                <div class="chat-empty">
+                  <span class="icon">💬</span>
+                  <h3>Sem mensagens</h3>
+                  <p>Envie uma mensagem para ${contact}</p>
+                </div>
+              `;
+                return;
+            }
+
+            let html = '';
+            let lastDate = '';
+
+            for (const msg of msgs) {
+                const dateLabel = formatDate(msg.timestamp);
+                if (dateLabel !== lastDate) {
+                    html += `<div class="date-divider">${dateLabel}</div>`;
+                    lastDate = dateLabel;
+                }
+
+                const isSent = msg.from === state.currentUser.username;
+                const senderName = isSent ? 'Você' : msg.from;
+                const time = formatTime(msg.timestamp);
+
+                html += `
+                <div class="message ${isSent ? 'sent' : 'received'}" data-msgid="${msg.id}">
+                  ${!isSent ? `<span class="sender-name">${senderName}</span>` : ''}
+                  ${msg.text}
+                  <span class="time">${time}</span>
+                  ${isSent ? `
+                    <div class="msg-actions">
+                      <button onclick="deleteMessageHandler('${msg.id}')">🗑️</button>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function showEmptyState() {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = `
+              <div class="chat-empty">
+                <span class="icon">👆</span>
+                <h3>Selecione um contato</h3>
+                <p>Escolha alguém da lista para começar a conversar</p>
+              </div>
+            `;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 50);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           HELPERS
+           ═══════════════════════════════════════════════════════════ */
+
+        function getInitials(username) {
+            return username.charAt(0).toUpperCase();
+        }
+
+        function getAvatarColor(username) {
+            const colors = [
+                '#7c6cf0', '#f472b6', '#34d399', '#60a5fa',
+                '#f59e0b', '#fb923c', '#a78bfa', '#2dd4bf'
+            ];
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts);
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
+        }
+
+        function formatDate(ts) {
+            const d = new Date(ts);
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+
+            if (d.toDateString() === today.toDateString()) return 'Hoje';
+            if (d.toDateString() === yesterday.toDateString()) return 'Ontem';
+            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           EMOJI PICKER
+           ═══════════════════════════════════════════════════════════ */
+
+        function initEmojiPicker() {
+            const picker = document.getElementById('emoji-picker');
+            picker.innerHTML = '';
+            EMOJIS.forEach(emoji => {
+                const btn = document.createElement('button');
+                btn.textContent = emoji;
+                btn.type = 'button';
+                btn.addEventListener('click', () => {
+                    const input = document.getElementById('message-input');
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const text = input.value;
+                    input.value = text.substring(0, start) + emoji + text.substring(end);
+                    input.focus();
+                    const newPos = start + emoji.length;
+                    input.setSelectionRange(newPos, newPos);
+                    picker.classList.remove('show');
+                });
+                picker.appendChild(btn);
+            });
+        }
+
+        document.getElementById('emoji-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const picker = document.getElementById('emoji-picker');
+            picker.classList.toggle('show');
+        });
+
+        document.addEventListener('click', function(e) {
+            const picker = document.getElementById('emoji-picker');
+            const btn = document.getElementById('emoji-btn');
+            if (!picker.contains(e.target) && e.target !== btn) {
+                picker.classList.remove('show');
+            }
+        });
+
+        /* ═══════════════════════════════════════════════════════════
+           HANDLERS
+           ═══════════════════════════════════════════════════════════ */
+
+        window.deleteMessageHandler = async function(messageId) {
+            if (!confirm('Apagar esta mensagem?')) return;
+            const result = await deleteMessage(messageId);
+            if (result.success) {
+                showToast('Mensagem apagada.', 'success');
+            } else {
+                showToast('Erro ao apagar: ' + result.error, 'error');
+            }
+        };
+
+        document.getElementById('clear-conversation-btn').addEventListener('click', async function() {
+            if (!state.selectedContact || !state.currentUser) return;
+            if (!confirm(`Apagar toda a conversa com ${state.selectedContact}?`)) return;
+            const result = await clearConversation(state.currentUser.username, state.selectedContact);
+            if (result.success) {
+                showToast('Conversa apagada.', 'success');
+            } else {
+                showToast('Erro: ' + result.error, 'error');
+            }
+        });
+
+        document.getElementById('add-contact-btn').addEventListener('click', async function() {
+            const input = document.getElementById('add-contact-input');
+            const contact = input.value.trim();
+            if (!contact) return;
+            if (!state.currentUser) return;
+            if (contact === state.currentUser.username) {
+                showToast('Não é possível adicionar a si mesmo.', 'error');
+                return;
+            }
+            const result = await addContact(state.currentUser.username, contact);
+            if (result.success) {
+                showToast(`Contato ${contact} adicionado!`, 'success');
+                input.value = '';
+            } else {
+                showToast(result.error, 'error');
+            }
+        });
+
+        document.getElementById('add-contact-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('add-contact-btn').click();
+            }
+        });
+
+        /* ═══════════════════════════════════════════════════════════
+           SELECT CONTACT
+           ═══════════════════════════════════════════════════════════ */
+
+        window.selectContact = function(username) {
+            if (state.selectedContact === username) return;
+            state.selectedContact = username;
+            renderChatScreen();
+            document.getElementById('message-input').focus();
+        };
+
+        /* ═══════════════════════════════════════════════════════════
+           INIT APP
+           ═══════════════════════════════════════════════════════════ */
+
+        function initApp() {
+            if (!state.currentUser) return;
+
+            if (state.unsubContacts) {
+                state.unsubContacts();
+                state.unsubContacts = null;
+            }
+
+            state.unsubContacts = listenContacts(state.currentUser.username, (contacts) => {
+                state.contacts = contacts;
+                if (!state.selectedContact && contacts.length > 0) {
+                    state.selectedContact = contacts[0];
+                } else if (state.selectedContact && !contacts.includes(state.selectedContact)) {
+                    state.selectedContact = null;
+                }
+                renderChatScreen();
+            });
+
+            renderChatScreen();
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           AUTH EVENTS
+           ═══════════════════════════════════════════════════════════ */
+
+        document.querySelectorAll('.auth-tabs button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.auth-tabs button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const tab = this.dataset.tab;
+                const loginForm = document.getElementById('login-form');
+                const registerForm = document.getElementById('register-form');
+                if (tab === 'login') {
+                    loginForm.classList.remove('hidden');
+                    registerForm.classList.add('hidden');
+                    document.getElementById('login-error').textContent = '';
+                    document.getElementById('register-error').textContent = '';
+                    document.getElementById('register-success').textContent = '';
+                } else {
+                    loginForm.classList.add('hidden');
+                    registerForm.classList.remove('hidden');
+                    document.getElementById('login-error').textContent = '';
+                    document.getElementById('register-error').textContent = '';
+                    document.getElementById('register-success').textContent = '';
+                }
+            });
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+
+            const user = await findUser(username, password);
+            if (!user) {
+                errorEl.textContent = 'Usuário ou senha inválidos.';
+                return;
+            }
+            errorEl.textContent = '';
+            state.currentUser = user;
+            renderAuthScreen();
+            showToast(`Bem-vindo, ${user.username}! 👋`, 'success');
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value.trim();
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+            const errorEl = document.getElementById('register-error');
+            const successEl = document.getElementById('register-success');
+
+            errorEl.textContent = '';
+            successEl.textContent = '';
+
+            if (username.length < 3) {
+                errorEl.textContent = 'Usuário deve ter pelo menos 3 caracteres.';
+                return;
+            }
+            if (password.length < 4) {
+                errorEl.textContent = 'Senha deve ter pelo menos 4 caracteres.';
+                return;
+            }
+            if (password !== confirm) {
+                errorEl.textContent = 'As senhas não coincidem.';
+                return;
+            }
+
+            try {
+                const exists = await userExists(username);
+                if (exists) {
+                    errorEl.textContent = 'Usuário já existe.';
+                    return;
+                }
+            } catch (err) {
+                errorEl.textContent = 'Erro ao verificar usuário: ' + err.message;
+                console.error('Erro em userExists:', err);
+                return;
+            }
+
+            const result = await createUser(username, password);
+            if (!result.success) {
+                errorEl.textContent = 'Erro ao cadastrar: ' + result.error;
+                console.error('Erro detalhado:', result.error);
+                return;
+            }
+
+            successEl.textContent = '✅ Cadastro realizado! Faça login.';
+            document.getElementById('register-username').value = '';
+            document.getElementById('register-password').value = '';
+            document.getElementById('register-confirm').value = '';
+
+            document.querySelector('.auth-tabs [data-tab="login"]').click();
+            document.getElementById('login-username').value = username;
+            document.getElementById('login-password').value = '';
+            showToast('Cadastro realizado com sucesso! 🎉', 'success');
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            if (state.unsubContacts) {
+                state.unsubContacts();
+                state.unsubContacts = null;
+            }
+            if (state.unsubMessages) {
+                state.unsubMessages();
+                state.unsubMessages = null;
+            }
+            state.currentUser = null;
+            state.contacts = [];
+            state.messages = [];
+            state.selectedContact = null;
+            renderAuthScreen();
+            showToast('Você saiu.', 'info');
+        });
+
+        document.getElementById('send-btn').addEventListener('click', sendMessageFromInput);
+        document.getElementById('message-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessageFromInput();
+            }
+        });
+
+        async function sendMessageFromInput() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !state.selectedContact || !state.currentUser) return;
+
+            const result = await sendMessage(state.currentUser.username, state.selectedContact, text);
+            if (result.success) {
+                input.value = '';
+                input.focus();
+            } else {
+                showToast('Erro ao enviar: ' + result.error, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderAuthScreen();
+            initEmojiPicker();
+
+            const msgInput = document.getElementById('message-input');
+            msgInput.addEventListener('focus', function() {
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
+
+            console.log('💬 Mensageiro conectado ao Firebase!');
+            console.log('🧹 Para apagar todos os dados, execute no console: limparTodosOsDados()');
+            console.log('😊 Use o botão de emojis para enriquecer suas mensagens!');
+        });
+    </script>
+
+</body>
+</html>
